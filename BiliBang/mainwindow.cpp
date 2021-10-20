@@ -100,7 +100,7 @@ void MainWindow::initTrayMenu()
 
     QAction* about = new QAction(menu);
     about->setText("关于/捐助");
-    hr->Get("https://gitee.com/fsmxm/pub/raw/master/donate/donate.png", QCoreApplication::applicationDirPath().append(CONF_PATH), DONATE);
+    hr->Get("https://gitee.com/GiteeLou/pub/raw/master/donate/donate.png", QCoreApplication::applicationDirPath().append(CONF_PATH), DONATE);
     connect(about, &QAction::triggered, [this, icon] () {
         if (dia)
             dia->close();
@@ -148,7 +148,7 @@ void MainWindow::initTrayMenu()
     QAction* ckUpd = new QAction(menu);
     ckUpd->setText("检查更新");
     connect(ckUpd, &QAction::triggered, [this](){
-        hr->chkUpd("https://gitee.com/fsmxm/pub/raw/master/BiliBang/pub.json");
+        hr->chkUpd("https://gitee.com/GiteeLou/pub/raw/master/BiliBang/pub.json");
     });
     menu->addAction(ckUpd);
 
