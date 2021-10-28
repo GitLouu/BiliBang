@@ -4,8 +4,8 @@
 #include <QJsonArray>
 #include <QCoreApplication>
 #include <QDir>
-#include "windows.h"
 #include <QProcess>
+#include <QElapsedTimer>
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent)
 {
@@ -92,6 +92,13 @@ void MainWindow::uncompressAll()
 {
     // 关闭主程序
     killProcess(parentPid);
+    // 让程序等待1秒，等主程序完全退出
+    QElapsedTimer timer;
+    timer.start();
+    while(timer.elapsed() < 1000)
+        QCoreApplication::processEvents();
+    //
+
     // TODO 备份旧文件
     // 开始更新
     for (int i = 0; i < setupFileList.size(); i++) {
@@ -116,10 +123,12 @@ void MainWindow::uncompressAll()
         progress->setValue(downCount + i + 1);
     }
     // 启动主程序
-    QProcess* process = new QProcess(this);
-    process->start("BiliBang.exe", QStringList());
+//    QProcess* process = new QProcess(this);
+//    process->start("BiliBang.exe", QStringList());
+    QProcess::startDetached("BiliBang.exe", QStringList());
     // 关闭更新程序
-    killProcess(QString::number(QCoreApplication::applicationPid()));
+    qApp->quit();
+    //killProcess(QString::number(QCoreApplication::applicationPid()));
 }
 
 void MainWindow::download(QNetworkReply::NetworkError err, const QByteArray& bytes,
@@ -168,6 +177,9 @@ bool MainWindow::createDir(const QString & dir)
 void MainWindow::killProcess(QString pid)
 {
     // 杀死进程pid，不杀其开启的子进程
-    QString cmd = QString("TASKKILL /PID %1 /F").arg(pid);
-    WinExec(cmd.toLocal8Bit(), SW_HIDE);
+    QStringList arg;
+    arg.append("/PID");
+    arg.append(pid);
+    arg.append("/F");
+    QProcess::execute("TASKKILL", arg);
 }

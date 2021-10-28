@@ -614,12 +614,11 @@ void MainWindow::handleUpdate(const QByteArray &response)
             QPushButton* updateNow = new QPushButton("在线升级（推荐）", dia);
             glay->addWidget(updateNow, ++col, 0);
             connect(updateNow, &QPushButton::released, this, [this, jsonDoc](){
-                QProcess* process = new QProcess(dia);
                 QStringList argList;
                 argList.append(QString::number(QCoreApplication::applicationPid()));
                 argList.append(jsonDoc["parts_upd"].toString());
                 argList.append(version);
-                process->start("BangUpdate.exe", argList);
+                QProcess::startDetached("BangUpdate.exe", argList);
                 dia->close();
             });
 
