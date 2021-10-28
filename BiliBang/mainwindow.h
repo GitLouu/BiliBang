@@ -113,7 +113,7 @@ private:
     /**
      * @brief 软件版本
      */
-    QString version = "1.1.1.2";
+    QString version = "1.1.2.0";
     /**
      * @brief timerId -1，无自动访问timer，网络正常；其他，有自动访问timer，网络不正常。
      */

@@ -22,6 +22,7 @@
 #include <QIntValidator>
 #include <QTimer>
 #include "windesktop.h"
+#include <QProcess>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -579,38 +580,56 @@ void MainWindow::handleUpdate(const QByteArray &response)
     QGridLayout* glay = new QGridLayout(dia);
     dia->setLayout(glay);
 
-    QLabel* verLabel = new QLabel(dia);
-    QString verTxt = "最新版本：";
-    verLabel->setText(verTxt.append(newVersion));
-    glay->addWidget(verLabel, 0, 0);
+    QLabel* currVerLabel = new QLabel(dia);
+    currVerLabel->setText("当前版本：" + version);
+    glay->addWidget(currVerLabel, 0, 0);
 
-    if (newVersion == version)
+    QLabel* verLabel = new QLabel(dia);
+    verLabel->setText("最新版本：" + newVersion);
+    glay->addWidget(verLabel, 1, 0);
+
+    QLabel* newLabel = new QLabel(dia);
+    newLabel->setText("<font color='red'>恭喜，已经是最新版本！</font>");
+    glay->addWidget(newLabel, 2, 0);
+
+    if (newVersion.compare(version) > 0)
     {
-        QLabel* newLabel = new QLabel(dia);
-        newLabel->setText("已经是最新版本！");
-        glay->addWidget(newLabel, 1, 0);
-    }
-    else
-    {
+        newLabel->setText("<font color='red'>有更新的版本！</font>");
         QJsonArray conArr = jsonDoc["content"].toArray();
         if (!conArr.isEmpty())
         {
             QLabel* newLabel = new QLabel(dia);
             newLabel->setText("更新内容：");
-            glay->addWidget(newLabel, 2, 0);
-            int i = 0;
-            for (; i < conArr.size(); i++) {
+            glay->addWidget(newLabel, 3, 0);
+            int col = 3;
+            for (int i = 0; i < conArr.size(); i++) {
                 newLabel = new QLabel(dia);
                 newLabel->setText(conArr.at(i).toString());
-                glay->addWidget(newLabel, i + 3, 0);
+                glay->addWidget(newLabel, ++col, 0);
             }
+
+            QLabel* newLineLabel = new QLabel(" ", dia);
+            glay->addWidget(newLineLabel, ++col, 0);
+
+            QPushButton* updateNow = new QPushButton("在线升级（推荐）", dia);
+            glay->addWidget(updateNow, ++col, 0);
+            connect(updateNow, &QPushButton::released, this, [this, jsonDoc](){
+                QProcess* process = new QProcess(dia);
+                QStringList argList;
+                argList.append(QString::number(QCoreApplication::applicationPid()));
+                argList.append(jsonDoc["parts_upd"].toString());
+                argList.append(version);
+                process->start("BangUpdate.exe", argList);
+                dia->close();
+            });
+
             QLabel* distLabel = new QLabel(dia);
-            QString distLink = "<a href='";
+            QString distLink = "想要完整安装包？<a href='";
             distLink.append(jsonDoc["dist"].toString())
-                    .append("'>").append("点此下载").append("</a>");
+                    .append("'>").append("(点此下载)").append("</a>");
             distLabel->setText(distLink);
             distLabel->setOpenExternalLinks(true);
-            glay->addWidget(distLabel, i + 3, 0);
+            glay->addWidget(distLabel, ++col, 0);
         }
     }
 
