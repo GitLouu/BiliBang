@@ -71,7 +71,7 @@ QString GetProductVer(const QString pFilePath)
     return QString("%1.%2.%3.%4").arg(d1).arg(d2).arg(d3).arg(d4);
 }
 
-bool shutdownSystem()
+bool powerOff()
 {
     HANDLE hToken;
     TOKEN_PRIVILEGES tkp;

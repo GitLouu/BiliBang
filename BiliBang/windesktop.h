@@ -8,7 +8,10 @@
 bool enumUserWindowsCB(HWND hwnd, LPARAM lParam);
 void setParentDesktop(QWidget *pWidget);
 QString GetProductVer(const QString pFilePath);
-
-bool shutdownSystem();
+/**
+ * @brief 关闭系统（计算机）
+ * @return
+ */
+bool powerOff();
 
 #endif // WINDESKTOP_H

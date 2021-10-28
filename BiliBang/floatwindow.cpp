@@ -6,7 +6,7 @@ FloatWindow::FloatWindow(QWidget *parent) : QWidget(parent)
 {
     setWindowFlags(Qt::FramelessWindowHint | Qt::Tool | Qt::WindowStaysOnTopHint);
     picLabel = new QLabel(this);
-    QBoxLayout* boxLayout = new QBoxLayout(QBoxLayout::Direction::LeftToRight);
+    QBoxLayout* boxLayout = new QBoxLayout(QBoxLayout::Direction::LeftToRight, this);
     boxLayout->addWidget(picLabel);
     boxLayout->setSpacing(0);
     boxLayout->setMargin(0);

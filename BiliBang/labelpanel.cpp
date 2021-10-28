@@ -11,7 +11,7 @@
 LabelPanel::LabelPanel(QWidget *parent) : QWidget(parent), floatWin(nullptr)
 {
 
-    QGridLayout* layout = new QGridLayout;
+    QGridLayout* layout = new QGridLayout(this);
 
     timeLabel.setText("00:00");
     titleLabel.setText("xxxxxxxx");

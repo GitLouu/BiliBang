@@ -41,7 +41,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     initPanelWidget();
 
-    floatWin = new FloatWindow;
+    initFloatWindow();
 
     initConfigs();
 
@@ -50,27 +50,20 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    delete floatWin;
-    delete initPanel;
     clearBangumis();
     clearVector(&panels);
     clearVector(&colorActions);
-    delete shutdownTimer;
+}
+
+void MainWindow::initFloatWindow()
+{
+    floatWin = new FloatWindow(this);
 }
 
 void MainWindow::initTrayMenu()
 {
-    shutdownTimer = new QTimer(this);
-    connect(shutdownTimer, &QTimer::timeout, [this] {
-        if (!shutdownSecsEnabled)
-            return;
-        if (--shutdownSecs > 0)
-            return;
-        shutdownSystem();
-    });
-
     tray = new QSystemTrayIcon(this);
-    QFile iFile(QCoreApplication::applicationDirPath().append(CONF_PATH).append(ICON));
+    QFile iFile(QCoreApplication::applicationDirPath() + CONF_PATH + ICON);
     QImage image(20, 20, QImage::Format_ARGB32);
     if (!iFile.exists())
     {
@@ -100,13 +93,13 @@ void MainWindow::initTrayMenu()
 
     QAction* about = new QAction(menu);
     about->setText("关于/捐助");
-    hr->Get("https://gitee.com/GiteeLou/pub/raw/master/donate/donate.png", QCoreApplication::applicationDirPath().append(CONF_PATH), DONATE);
-    connect(about, &QAction::triggered, [this, icon] () {
+    hr->Get(DONATE_PIC_URL, QCoreApplication::applicationDirPath() + TEMP_PATH, DONATE);
+    connect(about, &QAction::triggered, this, [this, icon] () {
         if (dia)
             dia->close();
         dia = new QDialog(this, Qt::WindowStaysOnTopHint);
         dia->setWindowTitle("关于/捐助");
-        QGridLayout* glay = new QGridLayout;
+        QGridLayout* glay = new QGridLayout(dia);
         dia->setLayout(glay);
 
         QLabel* ver = new QLabel(dia);
@@ -133,12 +126,12 @@ void MainWindow::initTrayMenu()
         glay->addWidget(tipLabel, 2, 0, 1, 2);
 
         QLabel* donateLabel = new QLabel(dia);
-        donateLabel->setPixmap(QPixmap(QCoreApplication::applicationDirPath().append(CONF_PATH).append(DONATE)).scaledToWidth(200));
+        donateLabel->setPixmap(QPixmap(QCoreApplication::applicationDirPath() + TEMP_PATH + DONATE).scaledToWidth(200));
         glay->addWidget(donateLabel, 3, 0, 1, 2);
 
         dia->open();
 
-        connect(dia, &QDialog::finished, [this](){
+        connect(dia, &QDialog::finished, this, [this](){
             delete dia;
             dia = nullptr;
         });
@@ -147,8 +140,8 @@ void MainWindow::initTrayMenu()
 
     QAction* ckUpd = new QAction(menu);
     ckUpd->setText("检查更新");
-    connect(ckUpd, &QAction::triggered, [this](){
-        hr->chkUpd("https://gitee.com/GiteeLou/pub/raw/master/BiliBang/pub.json");
+    connect(ckUpd, &QAction::triggered, this, [this](){
+        hr->chkUpd(CHK_UPD_URL);
     });
     menu->addAction(ckUpd);
 
@@ -161,7 +154,7 @@ void MainWindow::initTrayMenu()
     {
         QAction* color = new QAction(PRESET_COLOR_NAME[i], colorMenu);
         color->setCheckable(true);
-        connect(color, &QAction::triggered, [this, color, i](){
+        connect(color, &QAction::triggered, this, [this, color, i](){
             if (this->colorAct == color)
             {
                 this->colorAct->setChecked(true);
@@ -197,7 +190,7 @@ void MainWindow::initTrayMenu()
     autoRun->setText("开机启动");
     autoRun->setCheckable(true);
     autoRun->setChecked(autoStarted);
-    connect(autoRun, &QAction::triggered, [reg, this, appPath, appName](){
+    connect(autoRun, &QAction::triggered, this, [reg, this, appPath, appName](){
         if (autoStarted)
             reg->remove(appName);
         else
@@ -208,19 +201,18 @@ void MainWindow::initTrayMenu()
 
     QAction* shutdown = new QAction(menu);
     shutdown->setText("定时关机");
-    connect(shutdown, &QAction::triggered, [this](){
+    connect(shutdown, &QAction::triggered, this, [this](){
         if (dia)
             dia->close();
         dia = new QDialog(this, Qt::WindowStaysOnTopHint);
         dia->setWindowTitle("定时关机");
-        QGridLayout* glay = new QGridLayout;
+        QGridLayout* glay = new QGridLayout(dia);
         dia->setLayout(glay);
 
         QLineEdit* hourEdit = new QLineEdit(dia);
         hourEdit->setText("0");
         hourEdit->setValidator(new QIntValidator(0, 23, hourEdit));
         glay->addWidget(hourEdit, 0, 0);
-
 
         QLabel* lgplLabel = new QLabel(dia);
         lgplLabel->setText("小时");
@@ -241,34 +233,40 @@ void MainWindow::initTrayMenu()
         QPushButton* cancelBut = new QPushButton("取消关机", dia);
         glay->addWidget(cancelBut, 1, 2, 1, 2);
 
-        if (shutdownSecsEnabled)
+        if (powerOffTimer)
         {
-            hourEdit->setText(QString::number(shutdownSecs / 3600));
-            minEdit->setText(QString::number((shutdownSecs % 3600) / 60));
+            hourEdit->setText(QString::number(powerOffSecsLeft / 3600));
+            minEdit->setText(QString::number((powerOffSecsLeft % 3600) / 60));
         }
 
-        connect(yesBut, &QPushButton::released, [this, hourEdit, minEdit]{
+        connect(yesBut, &QPushButton::released, this, [this, hourEdit, minEdit]{
             int hour = hourEdit->text().toInt();
             int min = minEdit->text().toInt();
             if (hour * 60 + min > 0)
             {
-                shutdownSecs = (hour * 60 + min) * 60;
-                shutdownSecsEnabled = true;
-                shutdownTimer->start(1000);
+                powerOffSecsLeft = (hour * 60 + min) * 60;
+                if (!powerOffTimer)
+                {
+                    powerOffTimer = new QTimer(this);
+                    connect(powerOffTimer, &QTimer::timeout, this, &MainWindow::handlePowerOff);
+                    powerOffTimer->start(1000); // 每秒执行一次
+                }
                 dia->close();
             }
         });
-        connect(cancelBut, &QPushButton::released, [this]{
-            shutdownSecs = -1;
-            shutdownSecsEnabled = false;
-            shutdownTimer->stop();
+        connect(cancelBut, &QPushButton::released, this, [this] () {
+            if (powerOffTimer)
+            {
+                powerOffSecsLeft = -1;
+                delete powerOffTimer;
+                powerOffTimer = nullptr;
+            }
             dia->close();
         });
 
-
         dia->open();
 
-        connect(dia, &QDialog::finished, [this](){
+        connect(dia, &QDialog::finished, this, [this](){
             delete dia;
             dia = nullptr;
         });
@@ -282,6 +280,12 @@ void MainWindow::initTrayMenu()
 
     tray->setContextMenu(menu);
 
+}
+
+void MainWindow::handlePowerOff() {
+    if (--powerOffSecsLeft > 0)
+        return;
+    powerOff();
 }
 
 void MainWindow::initTopWidget()
@@ -326,7 +330,7 @@ void MainWindow::initPanelWidget()
     initPanel = new LabelPanel(panelWidget);
     initPanel->setTime("     ");
     initPanel->setTitle("正在读取...");
-    initPanel->setPubIndex("请稍后");
+    initPanel->setPubIndex("请稍候");
     initPanel->setFname("");
     initPanel->setUrl("");
     initPanel->move(0, 0);
@@ -340,19 +344,20 @@ void MainWindow::initPanelWidget()
 void MainWindow::initHttpRequest()
 {
     hr = new HttpRequest(this);
-
+    // 函数指针，handleJson指向HttpRequest::handle函数
     void (HttpRequest::*handleJson)(QNetworkReply::NetworkError, const QByteArray&) = &HttpRequest::handle;
     void (HttpRequest::*handleFile)(QNetworkReply::NetworkError, const QByteArray&, const QString&, const QString&) = &HttpRequest::handle;
+    // 绑定MainWindow::handleResponse 及handleDownload 信号来处理 HttpRequest::handle
     connect(hr, handleJson, this, &MainWindow::handleResponse);
     connect(hr, handleFile, this, &MainWindow::handleDownload);
-
+    // 绑定MainWindow::handleUpdate 信号来处理 HttpRequest::hndUpd 检查更新
     connect(hr, &HttpRequest::hndUpd, this, &MainWindow::handleUpdate);
 }
 
 void MainWindow::initConfigs()
 {
-    urlLines.append("https://bangumi.bilibili.com/web_api/timeline_global");
-    urlLines.append("https://bangumi.bilibili.com/web_api/timeline_cn");
+    urlLines.append(BANGUMI_URL_GLOLBAL);
+    urlLines.append(BANGUMI_URL_CN);
     currLine = 0;
     QFile cFile(QCoreApplication::applicationDirPath().append(CONF_PATH).append(CONF));
     if (!cFile.exists())
@@ -414,10 +419,9 @@ void MainWindow::drawPanels(int index)
     clearVector(&panels);
     if (!bangumis.isEmpty())
     {
-        if (initPanel)
+        if (initPanel->isVisible())
         {
-            delete initPanel;
-            initPanel = nullptr;
+            initPanel->hide();
         }
         Bangumi* b = bangumis.at(index);
         QString date = b->date;
@@ -474,11 +478,28 @@ void MainWindow::drawPanels(int index)
 
 void MainWindow::handleResponse(QNetworkReply::NetworkError err, const QByteArray &response)
 {
-    if (err != QNetworkReply::NoError && timerId == -1)
+    clearVector(&panels);
+    if (err != QNetworkReply::NoError) // 网络有问题，启动定时器
     {
-        timerId = startTimer(REREQUEST_TIMER);
+        timerId = startTimer(REREQUEST_TIME);
+        if (!initPanel->isVisible()) {
+            initPanel->show();
+        }
+        initPanel->setTitle("读取失败...");
+        initPanel->setPubIndex("请检查网络");
         return;
     }
+    if (timerId != -1) { // 网络没有问题，并且定时器启动了(timerId!=-1)，关闭定时器
+        killTimer(timerId);
+        timerId = -1;
+    }
+
+    if (!initPanel->isVisible()) {
+        initPanel->show();
+    }
+    initPanel->setTitle("正在读取...");
+    initPanel->setPubIndex("请稍候");
+
     clearBangumis();
 
     QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
@@ -533,15 +554,15 @@ void MainWindow::handleDownload(QNetworkReply::NetworkError err, const QByteArra
     {
         return;
     }
-    QString path = pPath;
-    QDir dir(path);
+    QDir dir(pPath);
     if (!dir.exists())
         dir.mkpath(dir.absolutePath());
-    QFile f(path.append(fname), this);
-    if (f.open(QIODevice::WriteOnly))
+
+    QFile file(pPath + fname, this);
+    if (file.open(QIODevice::WriteOnly))
     {
-        f.write(response);
-        f.close();
+        file.write(response);
+        file.close();
     }
 }
 
@@ -555,7 +576,7 @@ void MainWindow::handleUpdate(const QByteArray &response)
 
     dia = new QDialog(this, Qt::WindowStaysOnTopHint);
     dia->setWindowTitle("检查更新");
-    QGridLayout* glay = new QGridLayout;
+    QGridLayout* glay = new QGridLayout(dia);
     dia->setLayout(glay);
 
     QLabel* verLabel = new QLabel(dia);
@@ -595,7 +616,7 @@ void MainWindow::handleUpdate(const QByteArray &response)
 
     dia->open();
 
-    connect(dia, &QDialog::finished, [this](){
+    connect(dia, &QDialog::finished, this, [this](){
         delete  dia;
         dia = nullptr;
     });
@@ -617,6 +638,8 @@ void MainWindow::goRight()
 
 void MainWindow::switchLine()
 {
+    if (timerId != -1) // 如果无法访问网络，则不允许切换
+        return;
     if (++currLine >= urlLines.size())
         currLine = 0;
     readTimeLine();
@@ -702,7 +725,5 @@ void MainWindow::timerEvent(QTimerEvent *event)
     if (event->timerId() == timerId)
     {
         readTimeLine();
-        killTimer(timerId);
-        timerId = -1;
     }
 }
