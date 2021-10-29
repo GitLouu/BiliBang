@@ -98,7 +98,8 @@ void MainWindow::initTrayMenu()
     connect(about, &QAction::triggered, this, [this, icon] () {
         if (dia)
             dia->close();
-        dia = new QDialog(this, Qt::WindowStaysOnTopHint);
+        dia = new QDialog(this);
+        dia->setWindowFlags((dia->windowFlags() & ~Qt::WindowContextHelpButtonHint) | Qt::WindowStaysOnTopHint);
         dia->setWindowTitle("关于/捐助");
         QGridLayout* glay = new QGridLayout(dia);
         dia->setLayout(glay);
@@ -205,7 +206,8 @@ void MainWindow::initTrayMenu()
     connect(shutdown, &QAction::triggered, this, [this](){
         if (dia)
             dia->close();
-        dia = new QDialog(this, Qt::WindowStaysOnTopHint);
+        dia = new QDialog(this);
+        dia->setWindowFlags((dia->windowFlags() & ~Qt::WindowContextHelpButtonHint) | Qt::WindowStaysOnTopHint);
         dia->setWindowTitle("定时关机");
         QGridLayout* glay = new QGridLayout(dia);
         dia->setLayout(glay);
@@ -575,7 +577,8 @@ void MainWindow::handleUpdate(const QByteArray &response)
     if (dia)
         dia->close();
 
-    dia = new QDialog(this, Qt::WindowStaysOnTopHint);
+    dia = new QDialog(this);
+    dia->setWindowFlags((dia->windowFlags() & ~Qt::WindowContextHelpButtonHint) | Qt::WindowStaysOnTopHint);
     dia->setWindowTitle("检查更新");
     QGridLayout* glay = new QGridLayout(dia);
     dia->setLayout(glay);

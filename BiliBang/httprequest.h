@@ -19,6 +19,11 @@ public:
      */
     void Get(const QString& url);
     /**
+     * @brief Get 获取所有请求内容，发射信号 handle(QNetworkReply::NetworkError err, const QList<QByteArray>& bytes);
+     * @param urls
+     */
+    void Get(const QStringList& urls);
+    /**
      * @brief 下载文件，发射信号 handle(QNetworkReply::NetworkError err, const QByteArray& bytes, const QString& pPath, const QString& fname)
      * @param url 下载url
      * @param pPath 保存路径
@@ -33,6 +38,7 @@ public:
 
 signals:
     void handle(QNetworkReply::NetworkError err, const QByteArray& bytes);
+    void handle(QNetworkReply::NetworkError err, const QList<QByteArray>& byteArrays);
     void handle(QNetworkReply::NetworkError err, const QByteArray& bytes, const QString& pPath, const QString& fname);
 
     void hndUpd(const QByteArray& bytes);

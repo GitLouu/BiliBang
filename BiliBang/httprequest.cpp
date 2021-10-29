@@ -2,7 +2,8 @@
 
 #include <QTextCodec>
 #include <QFile>
-
+#include <QEventLoop>
+#include <QThread>
 
 HttpRequest::HttpRequest(QObject *parent) : QObject(parent)
 {
@@ -39,6 +40,30 @@ void HttpRequest::Get(const QString& url)
         emit handle(reply->error(), reply->readAll());
         reply->deleteLater();
     });
+}
+
+void HttpRequest::Get(const QStringList& urls)
+{
+    QNetworkRequest request;
+    request.setSslConfiguration(conf);
+    QNetworkReply::NetworkError err = QNetworkReply::NoError;
+    QList<QByteArray> byteArrays;
+    for(int i = 0; i < urls.size(); i++)
+    {
+        request.setUrl(QUrl(urls.at(i)));
+        QNetworkReply* reply = manager->get(request);
+        QEventLoop loop;
+        connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+        if (reply->error() != QNetworkReply::NoError)
+        {
+            err = reply->error();
+            break;
+        }
+        byteArrays.append(reply->readAll());
+        reply->deleteLater();
+    }
+    emit handle(err, byteArrays);
 }
 
 void HttpRequest::chkUpd(const QString &url)
