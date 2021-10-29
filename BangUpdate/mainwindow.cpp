@@ -123,12 +123,9 @@ void MainWindow::uncompressAll()
         progress->setValue(downCount + i + 1);
     }
     // 启动主程序
-//    QProcess* process = new QProcess(this);
-//    process->start("BiliBang.exe", QStringList());
     QProcess::startDetached("BiliBang.exe", QStringList());
-    // 关闭更新程序
+    // 退出程序
     qApp->quit();
-    //killProcess(QString::number(QCoreApplication::applicationPid()));
 }
 
 void MainWindow::download(QNetworkReply::NetworkError err, const QByteArray& bytes,
