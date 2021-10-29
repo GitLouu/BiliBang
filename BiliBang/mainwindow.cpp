@@ -5,7 +5,6 @@
 #include <QSizePolicy>
 #include <QLayout>
 #include <QLabel>
-#include <QPushButton>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -21,8 +20,9 @@
 #include <QLineEdit>
 #include <QIntValidator>
 #include <QTimer>
-#include "windesktop.h"
 #include <QProcess>
+
+#include "windesktop.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -92,10 +92,9 @@ void MainWindow::initTrayMenu()
 
     QMenu* menu = new QMenu(this);
 
-    QAction* about = new QAction(menu);
-    about->setText("关于/捐助");
+    QAction* about = new QAction("关于/捐助", menu);
     hr->Get(DONATE_PIC_URL, QCoreApplication::applicationDirPath() + TEMP_PATH, DONATE);
-    connect(about, &QAction::triggered, this, [this, icon] () {
+    connect(about, &QAction::triggered, this, [this] () {
         if (dia)
             dia->close();
         dia = new QDialog(this);
@@ -140,16 +139,13 @@ void MainWindow::initTrayMenu()
     });
     menu->addAction(about);
 
-    QAction* ckUpd = new QAction(menu);
-    ckUpd->setText("检查更新");
+    QAction* ckUpd = new QAction("检查更新", menu);
     connect(ckUpd, &QAction::triggered, this, [this](){
         hr->chkUpd(CHK_UPD_URL);
     });
     menu->addAction(ckUpd);
 
-    QMenu* colorMenu = new QMenu(menu);
-    colorMenu->setTitle("设置颜色");
-    colorMenu->setToolTip("设置挂件面板颜色");
+    QMenu* colorMenu = new QMenu("设置颜色", menu);
     menu->addMenu(colorMenu);
 
     for (int i = 0; i < PRESET_COLOR_COUNT; i++)
@@ -171,15 +167,21 @@ void MainWindow::initTrayMenu()
         colorMenu->addAction(color);
         colorActions.append(color);
     }
-
     colorAct = colorActions.at(0);
     colorAct->setChecked(true);
 
-
-    QAction* center = new QAction(menu);
-    center->setText("复位");
+    QAction* center = new QAction("复位", menu);
     connect(center, &QAction::triggered, this, &MainWindow::moveCenter);
     menu->addAction(center);
+
+    combineAct = new QAction("合并线路", menu);
+    combineAct->setCheckable(true);
+    connect(combineAct, &QAction::triggered, this, [this](){
+        switchLineButton->setVisible(!combineAct->isChecked());
+        readTimeLine();
+        saveConf();
+    });
+    menu->addAction(combineAct);
 
     QSettings* reg = new
             QSettings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
@@ -188,8 +190,7 @@ void MainWindow::initTrayMenu()
     QString appName = QFileInfo(appPath).baseName();
     autoStarted = reg->value(appName).toString() == appPath;
 
-    QAction* autoRun = new QAction(menu);
-    autoRun->setText("开机启动");
+    QAction* autoRun = new QAction("开机启动", menu);
     autoRun->setCheckable(true);
     autoRun->setChecked(autoStarted);
     connect(autoRun, &QAction::triggered, this, [reg, this, appPath, appName](){
@@ -201,8 +202,7 @@ void MainWindow::initTrayMenu()
     });
     menu->addAction(autoRun);
 
-    QAction* shutdown = new QAction(menu);
-    shutdown->setText("定时关机");
+    QAction* shutdown = new QAction("定时关机", menu);
     connect(shutdown, &QAction::triggered, this, [this](){
         if (dia)
             dia->close();
@@ -276,8 +276,7 @@ void MainWindow::initTrayMenu()
     });
     menu->addAction(shutdown);
 
-    QAction* quit = new QAction(menu);
-    quit->setText("退出");
+    QAction* quit = new QAction("退出", menu);
     connect(quit, &QAction::triggered, this, &MainWindow::quit);
     menu->addAction(quit);
 
@@ -313,12 +312,12 @@ void MainWindow::initTopWidget()
     topLayout->addWidget(rightButton, 0, 3);
     connect(rightButton, &QPushButton::clicked, this, &MainWindow::goRight);
 
-    QPushButton* bButton = new QPushButton("⇵", topWidget);
-    bButton->setFlat(true);
-    bButton->setFixedWidth(topButtonWidth);
-    bButton->setToolTip("切换日番/国创时间线");
-    topLayout->addWidget(bButton, 0, 4);
-    connect(bButton, &QPushButton::clicked, this, &MainWindow::switchLine);
+    switchLineButton = new QPushButton("⇵", topWidget);
+    switchLineButton->setFlat(true);
+    switchLineButton->setFixedWidth(topButtonWidth);
+    switchLineButton->setToolTip("切换日番/国创时间线");
+    topLayout->addWidget(switchLineButton, 0, 4);
+    connect(switchLineButton, &QPushButton::clicked, this, &MainWindow::switchLine);
 
     topWidget->resize(mainWindowWidth, topWidgetHeight);
     topWidget->show();
@@ -349,9 +348,11 @@ void MainWindow::initHttpRequest()
     hr = new HttpRequest(this);
     // 函数指针，handleJson指向HttpRequest::handle函数
     void (HttpRequest::*handleJson)(QNetworkReply::NetworkError, const QByteArray&) = &HttpRequest::handle;
+    void (HttpRequest::*handleJsons)(QNetworkReply::NetworkError, const QList<QByteArray>&) = &HttpRequest::handle;
     void (HttpRequest::*handleFile)(QNetworkReply::NetworkError, const QByteArray&, const QString&, const QString&) = &HttpRequest::handle;
     // 绑定MainWindow::handleResponse 及handleDownload 信号来处理 HttpRequest::handle
     connect(hr, handleJson, this, &MainWindow::handleResponse);
+    connect(hr, handleJsons, this, &MainWindow::handleResponses);
     connect(hr, handleFile, this, &MainWindow::handleDownload);
     // 绑定MainWindow::handleUpdate 信号来处理 HttpRequest::hndUpd 检查更新
     connect(hr, &HttpRequest::hndUpd, this, &MainWindow::handleUpdate);
@@ -370,7 +371,6 @@ void MainWindow::initConfigs()
     if (cFile.open(QIODevice::ReadOnly))
     {
         QJsonDocument jDoc = QJsonDocument::fromJson(cFile.readAll());
-
         cFile.close();
         QJsonArray jArr = jDoc["position"].toArray();
         if (!jArr.isEmpty())
@@ -393,6 +393,10 @@ void MainWindow::initConfigs()
         QAction* color = colorActions.at(colorIndex);
         color->trigger();
         colorAct = color;
+
+        bool cck = jDoc["combineChecked"].toBool(false);
+        combineAct->setChecked(cck);
+        switchLineButton->setVisible(!cck);
     }
 }
 
@@ -422,10 +426,7 @@ void MainWindow::drawPanels(int index)
     clearVector(&panels);
     if (!bangumis.isEmpty())
     {
-        if (initPanel->isVisible())
-        {
-            initPanel->hide();
-        }
+        initPanel->hide();
         Bangumi* b = bangumis.at(index);
         QString date = b->date;
         dateLabel->setText(date.append("(").append(WEEK_STR[b->dayOfWeek]).append(")"));
@@ -478,33 +479,14 @@ void MainWindow::drawPanels(int index)
         }
     }
 }
-
-void MainWindow::handleResponse(QNetworkReply::NetworkError err, const QByteArray &response)
+bool compareBan(const Bang* b1, const Bang* b2)
 {
-    clearVector(&panels);
-    if (err != QNetworkReply::NoError) // 网络有问题，启动定时器
-    {
-        timerId = startTimer(REREQUEST_TIME);
-        if (!initPanel->isVisible()) {
-            initPanel->show();
-        }
-        initPanel->setTitle("读取失败...");
-        initPanel->setPubIndex("请检查网络");
-        return;
-    }
-    if (timerId != -1) { // 网络没有问题，并且定时器启动了(timerId!=-1)，关闭定时器
-        killTimer(timerId);
-        timerId = -1;
-    }
+    return b1->pubTime.compare(b2->pubTime) <= 0;
+}
 
-    if (!initPanel->isVisible()) {
-        initPanel->show();
-    }
-    initPanel->setTitle("正在读取...");
-    initPanel->setPubIndex("请稍候");
-
-    clearBangumis();
-
+int initBangumis(QVector<Bangumi*>& bangumis, const QByteArray& response)
+{
+    int index = 0;
     QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
     QJsonArray jsonArr = jsonDoc["result"].toArray();
 
@@ -515,7 +497,7 @@ void MainWindow::handleResponse(QNetworkReply::NetworkError err, const QByteArra
         bangumi->date = jsonVal["date"].toString();
         bangumi->dayOfWeek = jsonVal["day_of_week"].toInt();
         if (jsonVal["is_today"].toInt() == 1)
-            todayIndex = i;
+            index = i;
 
         QJsonArray seaArr = jsonVal["seasons"].toArray();
         for (int j = 0; j < seaArr.size(); j++) {
@@ -533,22 +515,117 @@ void MainWindow::handleResponse(QNetworkReply::NetworkError err, const QByteArra
         }
         bangumis.append(bangumi);
     }
+    return index;
+}
 
-//    qDebug() << "-----------------------------------------------------------------------";
+void MainWindow::handleResponse(QNetworkReply::NetworkError err, const QByteArray &response)
+{
+    if (err != QNetworkReply::NoError) // 网络有问题，启动定时器
+    {
+        if (timerId == -1)
+            timerId = startTimer(REREQUEST_TIME);
+        initPanel->show();
+        initPanel->setTitle("读取失败...");
+        initPanel->setPubIndex("请检查网络");
+        return;
+    }
+    if (timerId != -1) { // 网络没有问题，并且定时器启动了(timerId!=-1)，关闭定时器
+        killTimer(timerId);
+        timerId = -1;
+    }
 
-//    for (int i = 0; i < bangumis.size(); i++) {
-//        qDebug() << bangumis[i]->date << ", " << bangumis[i]->dayOfWeek << "===========";
-//        QVector<Bang*> bangs = bangumis[i]->bangs;
-//        for (int j = 0; j < bangs.size(); j++)
-//        {
-//            qDebug() << bangs[j]->title << ", " << bangs[j]->seasonId;
-//        }
-//    }
+    clearBangumis();
 
-//    qDebug() << todayIndex;
-    currIndex = todayIndex;
+    currIndex = initBangumis(bangumis, response);
 
-    drawPanels(todayIndex);
+    drawPanels(currIndex);
+}
+
+void MainWindow::handleResponses(QNetworkReply::NetworkError err, const QList<QByteArray>& responses)
+{
+    if (err != QNetworkReply::NoError) // 网络有问题，启动定时器
+    {
+        if (timerId == -1)
+            timerId = startTimer(REREQUEST_TIME);
+        initPanel->show();
+        initPanel->setTitle("读取失败...");
+        initPanel->setPubIndex("请检查网络");
+        return;
+    }
+    if (timerId != -1) { // 网络没有问题，并且定时器启动了(timerId!=-1)，关闭定时器
+        killTimer(timerId);
+        timerId = -1;
+    }
+    clearBangumis();
+
+    currIndex = initBangumis(bangumis, responses.at(0));
+
+    for (int x = 1; x < responses.size(); x++) {
+        QJsonDocument jsonDoc = QJsonDocument::fromJson(responses.at(x));
+        QJsonArray jsonArr = jsonDoc["result"].toArray();
+
+        for (int i = 0, bIndex = 0; i < jsonArr.size(); bIndex++)
+        {
+            QJsonValue jsonVal = jsonArr[i];
+
+            QString date = jsonVal["date"].toString();
+            int dayOfWeek = jsonVal["day_of_week"].toInt();
+            // 判断存放位置
+            Bangumi* bangumi = nullptr;
+            if (bIndex < bangumis.size())
+            {
+                bangumi = bangumis.at(bIndex);
+                int compare = date.compare(bangumi->date);
+                if (compare < 0)
+                {
+                    bangumi = new Bangumi;
+                    bangumi->date = date;
+                    bangumi->dayOfWeek = dayOfWeek;
+                    bangumis.insert(bIndex, bangumi);
+                    i++;
+                }
+                else if (compare == 0)
+                {
+                    i++;
+                }
+                else
+                {
+                    continue;
+                }
+            }
+            else
+            {
+                bangumi = new Bangumi;
+                bangumi->date = date;
+                bangumi->dayOfWeek = dayOfWeek;
+                bangumis.append(bangumi);
+                i++;
+            }
+            ////
+
+            QJsonArray seaArr = jsonVal["seasons"].toArray();
+            for (int j = 0; j < seaArr.size(); j++) {
+                QJsonValue val = seaArr[j];
+                Bang* b = new Bang;
+                b->cover = val["cover"].toString();
+                b->pubIndex = val["pub_index"].toString();
+                if (b->pubIndex == "")
+                    b->pubIndex = val["delay_index"].toString().append("(").append(val["delay_reason"].toString()).append(")");
+                b->pubTime = val["pub_time"].toString();
+                b->seasonId = val["season_id"].toInt();
+                b->title = val["title"].toString();
+                b->url = val["url"].toString();
+                bangumi->bangs.append(b);
+            }
+        }
+    }
+
+    for (int i = 0; i < bangumis.size(); i++) {
+        Bangumi* bangumi = bangumis.at(i);
+        std::sort(bangumi->bangs.begin(), bangumi->bangs.end(), compareBan);
+    }
+
+    drawPanels(currIndex);
 }
 
 void MainWindow::handleDownload(QNetworkReply::NetworkError err, const QByteArray &response, const QString& pPath, const QString &fname)
@@ -669,7 +746,19 @@ void MainWindow::switchLine()
 
 void MainWindow::readTimeLine()
 {
-    hr->Get(urlLines.at(currLine));
+    clearVector(&panels);
+    initPanel->show();
+    initPanel->setTitle("正在读取...");
+    initPanel->setPubIndex("请稍候");
+    if (!combineAct->isChecked())
+    {
+        hr->Get(urlLines.at(currLine));
+    }
+    else
+    {
+        QStringList list(urlLines.toList());
+        hr->Get(list);
+    }
 }
 
 void MainWindow::mousePressEvent(QMouseEvent *event)
@@ -719,7 +808,13 @@ void MainWindow::saveConf()
 
     obj.insert("colorIndex", colorIndex);
 
+    obj.insert("combineChecked", combineAct->isChecked());
+
     doc.setObject(obj);
+
+    QDir dir(QCoreApplication::applicationDirPath().append(CONF_PATH));
+    if (!dir.exists())
+        dir.mkpath(dir.absolutePath());
 
     QFile cFile(QCoreApplication::applicationDirPath().append(CONF_PATH).append(CONF));
     if (cFile.open(QIODevice::WriteOnly))

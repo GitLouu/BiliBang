@@ -10,7 +10,7 @@ LIBS += -lVersion
 
 RC_ICONS = BiliBang.ico
 
-VERSION = 1.1.2.0
+VERSION = 1.1.2.1
 QMAKE_TARGET_PRODUCT = "BiliBang"
 QMAKE_TARGET_DESCRIPTION = "BiliBang"
 RC_LANG = 0x0004

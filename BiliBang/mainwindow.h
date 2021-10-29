@@ -5,6 +5,7 @@
 #include <QMouseEvent>
 #include <QSystemTrayIcon>
 #include <QLineEdit>
+#include <QPushButton>
 
 #include "labelpanel.h"
 #include "httprequest.h"
@@ -57,6 +58,10 @@ private:
      */
     QLabel* dateLabel = nullptr;
     /**
+     * @brief 切换新番线路（国创/日番）按钮
+     */
+    QPushButton* switchLineButton = nullptr;
+    /**
      * @brief 主面板，放置动画panel
      */
     QWidget* panelWidget = nullptr;
@@ -65,9 +70,13 @@ private:
      */
     QDialog* dia = nullptr;
     /**
-     * @brief 托盘菜单 - 设置颜色
+     * @brief colorAction 当前选择的QAction
      */
     QAction* colorAct = nullptr;
+    /**
+     * @brief 合并路线
+     */
+    QAction* combineAct = nullptr;
     /**
      * @brief 当前选择的面板颜色
      */
@@ -113,7 +122,7 @@ private:
     /**
      * @brief 软件版本
      */
-    QString version = "1.1.2.0";
+    QString version = "1.1.2.1";
     /**
      * @brief timerId -1，无自动访问timer，网络正常；其他，有自动访问timer，网络不正常。
      */
@@ -173,21 +182,18 @@ private:
     void clearVector(QVector<T*>* vec);
     /**
      * @brief 处理网络访问内容
-     * @param err
-     * @param response
      */
     void handleResponse(QNetworkReply::NetworkError err, const QByteArray& response);
     /**
+     * @brief 处理多个网络访问内容
+     */
+    void handleResponses(QNetworkReply::NetworkError err, const QList<QByteArray>& responses);
+    /**
      * @brief 处理网络下载文件
-     * @param err
-     * @param response
-     * @param pPath
-     * @param fname
      */
     void handleDownload(QNetworkReply::NetworkError err, const QByteArray& response, const QString& pPath, const QString& fname);
     /**
      * @brief 处理检查更新
-     * @param response
      */
     void handleUpdate(const QByteArray& response);
     void quit();
