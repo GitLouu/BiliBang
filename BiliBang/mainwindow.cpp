@@ -21,6 +21,7 @@
 #include <QIntValidator>
 #include <QTimer>
 #include <QProcess>
+#include <QPropertyAnimation>
 
 #include "windesktop.h"
 
@@ -47,6 +48,8 @@ MainWindow::MainWindow(QWidget *parent)
     initConfigs();
 
     readTimeLine();
+
+    chkMsg();
 }
 
 MainWindow::~MainWindow()
@@ -92,43 +95,48 @@ void MainWindow::initTrayMenu()
 
     QMenu* menu = new QMenu(this);
 
-    QAction* about = new QAction("关于/捐助", menu);
+    QAction* about = new QAction(ABOUT_US_TEXT, menu);
     hr->Get(DONATE_PIC_URL, QCoreApplication::applicationDirPath() + TEMP_PATH, DONATE);
     connect(about, &QAction::triggered, this, [this] () {
         if (dia)
             dia->close();
         dia = new QDialog(this);
         dia->setWindowFlags((dia->windowFlags() & ~Qt::WindowContextHelpButtonHint) | Qt::WindowStaysOnTopHint);
-        dia->setWindowTitle("关于/捐助");
+        dia->setWindowTitle(ABOUT_US_TEXT);
         QGridLayout* glay = new QGridLayout(dia);
         dia->setLayout(glay);
 
+        int row = 0;
         QLabel* ver = new QLabel(dia);
-        QString verTxt = "版本：";
-        ver->setText(verTxt.append(version));
-        ver->setOpenExternalLinks(true);
-        glay->addWidget(ver, 0, 0);
+        ver->setText("BiliBang " + QCoreApplication::applicationVersion());
+        glay->addWidget(ver, row++, 0);
 
         QLabel* qtLabel = new QLabel(dia);
         qtLabel->setText("<a href='https://www.qt.io'>Qt</a>");
         qtLabel->setToolTip("访问Qt官网");
         qtLabel->setOpenExternalLinks(true);
-        glay->addWidget(qtLabel, 1, 0);
+        glay->addWidget(qtLabel, row++, 0);
 
         QLabel* lgplLabel = new QLabel(dia);
         lgplLabel->setText("<a href='https://www.gnu.org/licenses/lgpl-3.0.html'>LGPL-V3</a>");
         lgplLabel->setOpenExternalLinks(true);
         lgplLabel->setToolTip("访问LGPL开源协议");
-        glay->addWidget(lgplLabel, 1, 1);
+        glay->addWidget(lgplLabel, row++, 0);
+
+        QLabel* codeLabel = new QLabel(dia);
+        codeLabel->setText("<a href='https://gitee.com/GiteeLou/BiliBang.git'>BiliBang</a>");
+        codeLabel->setOpenExternalLinks(true);
+        codeLabel->setToolTip("查看源码");
+        glay->addWidget(codeLabel, row++, 0);
 
         QLabel* tipLabel = new QLabel(dia);
-        tipLabel->setText("❤ 喜欢的话可以捐助哦");
+        tipLabel->setText("❤ 喜欢的话可以打赏哦");
         tipLabel->setStyleSheet("color: green;");
-        glay->addWidget(tipLabel, 2, 0, 1, 2);
+        glay->addWidget(tipLabel, row++, 0);
 
         QLabel* donateLabel = new QLabel(dia);
         donateLabel->setPixmap(QPixmap(QCoreApplication::applicationDirPath() + TEMP_PATH + DONATE).scaledToWidth(200));
-        glay->addWidget(donateLabel, 3, 0, 1, 2);
+        glay->addWidget(donateLabel, row++, 0);
 
         dia->open();
 
@@ -139,13 +147,14 @@ void MainWindow::initTrayMenu()
     });
     menu->addAction(about);
 
-    QAction* ckUpd = new QAction("检查更新", menu);
-    connect(ckUpd, &QAction::triggered, this, [this](){
+    ckUpdAct = new QAction(CHECK_UPDATE_TEXT, menu);
+    connect(ckUpdAct, &QAction::triggered, this, [this](){
+        chkUpdActTriggered = true;
         hr->chkUpd(CHK_UPD_URL);
     });
-    menu->addAction(ckUpd);
+    menu->addAction(ckUpdAct);
 
-    QMenu* colorMenu = new QMenu("设置颜色", menu);
+    QMenu* colorMenu = new QMenu(SET_COLOR_TEXT, menu);
     menu->addMenu(colorMenu);
 
     for (int i = 0; i < PRESET_COLOR_COUNT; i++)
@@ -170,18 +179,21 @@ void MainWindow::initTrayMenu()
     colorAct = colorActions.at(0);
     colorAct->setChecked(true);
 
-    QAction* center = new QAction("复位", menu);
-    connect(center, &QAction::triggered, this, &MainWindow::moveCenter);
-    menu->addAction(center);
+    QMenu* otherMenu = new QMenu(OTHER_MENU_TEXT, this);
+    menu->addMenu(otherMenu);
 
-    combineAct = new QAction("合并线路", menu);
+    QAction* center = new QAction(RESET_POSITION_TEXT, otherMenu);
+    connect(center, &QAction::triggered, this, &MainWindow::moveCenter);
+    otherMenu->addAction(center);
+
+    combineAct = new QAction(COMBINE_LINE_TEXT, otherMenu);
     combineAct->setCheckable(true);
     connect(combineAct, &QAction::triggered, this, [this](){
         switchLineButton->setVisible(!combineAct->isChecked());
         readTimeLine();
         saveConf();
     });
-    menu->addAction(combineAct);
+    otherMenu->addAction(combineAct);
 
     QSettings* reg = new
             QSettings("HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
@@ -190,7 +202,7 @@ void MainWindow::initTrayMenu()
     QString appName = QFileInfo(appPath).baseName();
     autoStarted = reg->value(appName).toString() == appPath;
 
-    QAction* autoRun = new QAction("开机启动", menu);
+    QAction* autoRun = new QAction(AUTO_START_TEXT, otherMenu);
     autoRun->setCheckable(true);
     autoRun->setChecked(autoStarted);
     connect(autoRun, &QAction::triggered, this, [reg, this, appPath, appName](){
@@ -200,49 +212,92 @@ void MainWindow::initTrayMenu()
             reg->setValue(appName, appPath);
         autoStarted = !autoStarted;
     });
-    menu->addAction(autoRun);
+    otherMenu->addAction(autoRun);
 
-    QAction* shutdown = new QAction("定时关机", menu);
-    connect(shutdown, &QAction::triggered, this, [this](){
-        if (dia)
-            dia->close();
-        dia = new QDialog(this);
-        dia->setWindowFlags((dia->windowFlags() & ~Qt::WindowContextHelpButtonHint) | Qt::WindowStaysOnTopHint);
-        dia->setWindowTitle("定时关机");
-        QGridLayout* glay = new QGridLayout(dia);
-        dia->setLayout(glay);
+    autoPoweroffAct = new QAction(AUTO_POWEROFF_TEXT, otherMenu);
+    connect(autoPoweroffAct, &QAction::triggered, this, [this](){
+        if (poweroffDia)
+            poweroffDia->close();
+        poweroffDia = new QDialog(this);
+        poweroffDia->setWindowFlags((poweroffDia->windowFlags() & ~Qt::WindowContextHelpButtonHint) | Qt::WindowStaysOnTopHint);
+        poweroffDia->setWindowTitle(AUTO_POWEROFF_TEXT);
+        QGridLayout* glay = new QGridLayout(poweroffDia);
+        poweroffDia->setLayout(glay);
 
-        QLineEdit* hourEdit = new QLineEdit(dia);
-        hourEdit->setText("0");
+        int row = 0;
+
+        hourEdit = new QLineEdit("0", poweroffDia);
         hourEdit->setValidator(new QIntValidator(0, 23, hourEdit));
-        glay->addWidget(hourEdit, 0, 0);
+        glay->addWidget(hourEdit, row, 0);
 
-        QLabel* lgplLabel = new QLabel(dia);
-        lgplLabel->setText("小时");
-        glay->addWidget(lgplLabel, 0, 1);
+        QLabel* hLabel = new QLabel("小时", poweroffDia);
+        glay->addWidget(hLabel, row, 1);
 
-        QLineEdit* minEdit = new QLineEdit(dia);
-        minEdit->setText("0");
+        minEdit = new QLineEdit("0", poweroffDia);
         minEdit->setValidator(new QIntValidator(0, 59, minEdit));
-        glay->addWidget(minEdit, 0, 2);
+        glay->addWidget(minEdit, row, 2);
 
-        QLabel* tipLabel = new QLabel(dia);
-        tipLabel->setText("分钟后关机");
-        glay->addWidget(tipLabel, 0, 3);
+        QLabel* mLabel = new QLabel("分钟", poweroffDia);
+        glay->addWidget(mLabel, row++, 3);
 
-        QPushButton* yesBut = new QPushButton("定时关机", dia);
-        glay->addWidget(yesBut, 1, 0, 1, 2);
+        QLabel* tipLabel = new QLabel("请设置时间", poweroffDia);
+        tipLabel->setWordWrap(true);
+        glay->addWidget(tipLabel, row++, 0, 1, 4);
 
-        QPushButton* cancelBut = new QPushButton("取消关机", dia);
-        glay->addWidget(cancelBut, 1, 2, 1, 2);
+        QPushButton* yesBut = new QPushButton("定时关机", poweroffDia);
+        glay->addWidget(yesBut, row, 0, 1, 2);
+
+        QPushButton* cancelBut = new QPushButton("关闭窗口", poweroffDia);
+        glay->addWidget(cancelBut, row++, 2, 1, 2);
+
+        poweroffDia->setMaximumWidth(mainWindowWidth);
+        poweroffDia->setMaximumHeight(mainWindowHeigth);
+
 
         if (powerOffTimer)
         {
             hourEdit->setText(QString::number(powerOffSecsLeft / 3600));
+            hourEdit->setEnabled(false);
             minEdit->setText(QString::number((powerOffSecsLeft % 3600) / 60));
+            minEdit->setEnabled(false);
+            yesBut->setText("重新设置");
+            cancelBut->setText("取消关机");
+            if (powerOffSecsLeft < 120)
+            {
+                tipLabel->setText("<font color='red'>即将自动关机...</font>");
+            }
         }
 
-        connect(yesBut, &QPushButton::released, this, [this, hourEdit, minEdit]{
+        poweroffDia->open();
+
+        if (!lessThanTriggered && powerOffTimer && powerOffSecsLeft < LESSTHAN_POP)
+        {
+            QPropertyAnimation* animation = new QPropertyAnimation(poweroffDia, "pos");
+            animation->setDuration(250);
+            int x = 6;
+            for (int i = 0; i <= 10; i++, x*=-1) {
+                animation->setKeyValueAt(0.1F * i, poweroffDia->pos() - QPoint(x, x));
+
+            }
+            animation->setLoopCount(2);
+            animation->start(QPropertyAnimation::DeleteWhenStopped);
+        }
+
+        connect(yesBut, &QPushButton::released, this, [this, yesBut, cancelBut, tipLabel]{
+            if (powerOffTimer)
+            {
+                hourEdit->setText("0");
+                hourEdit->setEnabled(true);
+                minEdit->setText("0");
+                minEdit->setEnabled(true);
+                yesBut->setText("定时关机");
+                cancelBut->setText("关闭窗口");
+                tipLabel->setText("请设置时间");
+                powerOffSecsLeft = -1;
+                delete powerOffTimer;
+                powerOffTimer = nullptr;
+                return;
+            }
             int hour = hourEdit->text().toInt();
             int min = minEdit->text().toInt();
             if (hour * 60 + min > 0)
@@ -254,7 +309,8 @@ void MainWindow::initTrayMenu()
                     connect(powerOffTimer, &QTimer::timeout, this, &MainWindow::handlePowerOff);
                     powerOffTimer->start(1000); // 每秒执行一次
                 }
-                dia->close();
+                lessThanTriggered = false;
+                poweroffDia->close();
             }
         });
         connect(cancelBut, &QPushButton::released, this, [this] () {
@@ -264,27 +320,37 @@ void MainWindow::initTrayMenu()
                 delete powerOffTimer;
                 powerOffTimer = nullptr;
             }
-            dia->close();
+            poweroffDia->close();
         });
 
-        dia->open();
-
-        connect(dia, &QDialog::finished, this, [this](){
-            delete dia;
-            dia = nullptr;
+        connect(poweroffDia, &QDialog::finished, this, [this](){
+            delete hourEdit;
+            delete minEdit;
+            delete poweroffDia;
+            hourEdit = minEdit = nullptr;
+            poweroffDia = nullptr;
         });
     });
-    menu->addAction(shutdown);
+    otherMenu->addAction(autoPoweroffAct);
 
-    QAction* quit = new QAction("退出", menu);
+    QAction* quit = new QAction(QUIT_TEXT, menu);
     connect(quit, &QAction::triggered, this, &MainWindow::quit);
     menu->addAction(quit);
 
     tray->setContextMenu(menu);
-
 }
 
 void MainWindow::handlePowerOff() {
+    if(hourEdit && minEdit)
+    {
+        hourEdit->setText(QString::number(powerOffSecsLeft / 3600));
+        minEdit->setText(QString::number((powerOffSecsLeft % 3600) / 60));
+    }
+    if (!lessThanTriggered && !poweroffDia && powerOffSecsLeft < LESSTHAN_POP)
+    {
+        autoPoweroffAct->trigger();
+        lessThanTriggered = true;
+    }
     if (--powerOffSecsLeft > 0)
         return;
     powerOff();
@@ -319,6 +385,15 @@ void MainWindow::initTopWidget()
     topLayout->addWidget(switchLineButton, 0, 4);
     connect(switchLineButton, &QPushButton::clicked, this, &MainWindow::switchLine);
 
+    msgButton = new QPushButton("💬", topWidget);
+    msgButton->setFlat(true);
+    msgButton->setFixedWidth(topButtonWidth);
+    msgButton->setToolTip("有新版本！");
+    topLayout->addWidget(msgButton, 0, 5);
+    msgButton->hide();
+    connect(msgButton, &QPushButton::clicked, this, [this](){
+        ckUpdAct->trigger();
+    });
     topWidget->resize(mainWindowWidth, topWidgetHeight);
     topWidget->show();
 }
@@ -356,6 +431,7 @@ void MainWindow::initHttpRequest()
     connect(hr, handleFile, this, &MainWindow::handleDownload);
     // 绑定MainWindow::handleUpdate 信号来处理 HttpRequest::hndUpd 检查更新
     connect(hr, &HttpRequest::hndUpd, this, &MainWindow::handleUpdate);
+    connect(hr, &HttpRequest::hndUpd, this, &MainWindow::handleMsg);
 }
 
 void MainWindow::initConfigs()
@@ -648,6 +724,8 @@ void MainWindow::handleDownload(QNetworkReply::NetworkError err, const QByteArra
 
 void MainWindow::handleUpdate(const QByteArray &response)
 {
+    if (!chkUpdActTriggered)
+        return;
     QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
     QString newVersion = jsonDoc["version"].toString();
 
@@ -656,61 +734,66 @@ void MainWindow::handleUpdate(const QByteArray &response)
 
     dia = new QDialog(this);
     dia->setWindowFlags((dia->windowFlags() & ~Qt::WindowContextHelpButtonHint) | Qt::WindowStaysOnTopHint);
-    dia->setWindowTitle("检查更新");
+    dia->setWindowTitle(CHECK_UPDATE_TEXT);
     QGridLayout* glay = new QGridLayout(dia);
     dia->setLayout(glay);
 
+    int row = 0;
     QLabel* currVerLabel = new QLabel(dia);
-    currVerLabel->setText("当前版本：" + version);
-    glay->addWidget(currVerLabel, 0, 0);
+    currVerLabel->setText("当前版本：" + QCoreApplication::applicationVersion());
+    glay->addWidget(currVerLabel, row++, 0);
 
     QLabel* verLabel = new QLabel(dia);
     verLabel->setText("最新版本：" + newVersion);
-    glay->addWidget(verLabel, 1, 0);
+    glay->addWidget(verLabel, row++, 0);
 
     QLabel* newLabel = new QLabel(dia);
     newLabel->setText("<font color='red'>恭喜，已经是最新版本！</font>");
-    glay->addWidget(newLabel, 2, 0);
+    glay->addWidget(newLabel, row++, 0);
 
-    if (newVersion.compare(version) > 0)
+    bool hasNew = newVersion.compare(QCoreApplication::applicationVersion()) > 0;
+    if (hasNew)
     {
+        msgButton->show();
         newLabel->setText("<font color='red'>有更新的版本！</font>");
-        QJsonArray conArr = jsonDoc["content"].toArray();
-        if (!conArr.isEmpty())
-        {
-            QLabel* newLabel = new QLabel(dia);
-            newLabel->setText("更新内容：");
-            glay->addWidget(newLabel, 3, 0);
-            int col = 3;
-            for (int i = 0; i < conArr.size(); i++) {
-                newLabel = new QLabel(dia);
-                newLabel->setText(conArr.at(i).toString());
-                glay->addWidget(newLabel, ++col, 0);
-            }
-
-            QLabel* newLineLabel = new QLabel(" ", dia);
-            glay->addWidget(newLineLabel, ++col, 0);
-
-            QPushButton* updateNow = new QPushButton("在线升级（推荐）", dia);
-            glay->addWidget(updateNow, ++col, 0);
-            connect(updateNow, &QPushButton::released, this, [this, jsonDoc](){
-                QStringList argList;
-                argList.append(QString::number(QCoreApplication::applicationPid()));
-                argList.append(jsonDoc["parts_upd"].toString());
-                argList.append(version);
-                QProcess::startDetached("BangUpdate.exe", argList);
-                dia->close();
-            });
-
-            QLabel* distLabel = new QLabel(dia);
-            QString distLink = "想要完整安装包？<a href='";
-            distLink.append(jsonDoc["dist"].toString())
-                    .append("'>").append("(点此下载)").append("</a>");
-            distLabel->setText(distLink);
-            distLabel->setOpenExternalLinks(true);
-            glay->addWidget(distLabel, ++col, 0);
+    }
+    QJsonArray conArr = jsonDoc["content"].toArray();
+    if (!conArr.isEmpty())
+    {
+        QLabel* newLabel = new QLabel(dia);
+        newLabel->setText(hasNew ? "更新内容：" : "当前内容：");
+        glay->addWidget(newLabel, row++, 0);
+        for (int i = 0; i < conArr.size(); i++) {
+            newLabel = new QLabel(dia);
+            newLabel->setText(conArr.at(i).toString());
+            glay->addWidget(newLabel, row++, 0);
         }
     }
+    QLabel* newLineLabel = new QLabel(" ", dia);
+    glay->addWidget(newLineLabel, row++, 0);
+
+    if (hasNew)
+    {
+        QPushButton* updateNow = new QPushButton("在线升级（推荐）", dia);
+        glay->addWidget(updateNow, row++, 0);
+        connect(updateNow, &QPushButton::released, this, [this, jsonDoc](){
+            QStringList argList;
+            argList.append(QString::number(QCoreApplication::applicationPid()));
+            argList.append(jsonDoc["parts_upd"].toString());
+            argList.append(QCoreApplication::applicationVersion());
+            QProcess::startDetached("BangUpdate.exe", argList);
+            dia->close();
+        });
+    }
+
+    QLabel* distLabel = new QLabel(dia);
+    QString distLinkUrl = jsonDoc["dist"].toString();
+    if (distLinkUrl.isEmpty())
+        distLinkUrl += DIST_LINK_URL;
+
+    distLabel->setText("寻找历史版本？<a href='" + distLinkUrl + "'>(点此查看)</a>");
+    distLabel->setOpenExternalLinks(true);
+    glay->addWidget(distLabel, row++, 0);
 
     dia->open();
 
@@ -718,6 +801,22 @@ void MainWindow::handleUpdate(const QByteArray &response)
         delete  dia;
         dia = nullptr;
     });
+}
+
+void MainWindow::handleMsg(const QByteArray &response)
+{
+    if (chkUpdActTriggered)
+        return;
+    QJsonDocument jsonDoc = QJsonDocument::fromJson(response);
+    QString newVersion = jsonDoc["version"].toString();
+    if (newVersion.compare(QCoreApplication::applicationVersion()) > 0)
+        msgButton->show();
+}
+
+void MainWindow::chkMsg()
+{
+    chkUpdActTriggered = false;
+    hr->chkUpd(CHK_UPD_URL);
 }
 
 void MainWindow::goLeft()
@@ -841,5 +940,6 @@ void MainWindow::timerEvent(QTimerEvent *event)
     if (event->timerId() == timerId)
     {
         readTimeLine();
+        chkMsg();
     }
 }

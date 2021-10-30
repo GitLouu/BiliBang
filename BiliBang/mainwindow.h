@@ -62,13 +62,36 @@ private:
      */
     QPushButton* switchLineButton = nullptr;
     /**
+     * @brief 消息按钮（更新版本提示）
+     */
+    QPushButton* msgButton = nullptr;
+    /**
+     * @brief 触发检查更新按钮（否则是有新版本通知）
+     */
+    bool chkUpdActTriggered;
+    /**
+     * @brief 检查更新按钮
+     */
+    QAction* ckUpdAct = nullptr;
+    /**
      * @brief 主面板，放置动画panel
      */
     QWidget* panelWidget = nullptr;
     /**
-     * @brief 弹出对话框，包括关于，定时关机，检查更新
+     * @brief 弹出对话框，包括关于，检查更新
      */
     QDialog* dia = nullptr;
+    /**
+     * @brief 定时关机弹出对话框
+     */
+    QDialog* poweroffDia = nullptr;
+    bool lessThanTriggered = false;
+    QLineEdit* hourEdit = nullptr;
+    QLineEdit* minEdit = nullptr;
+    /**
+     * @brief 定时关机act
+     */
+    QAction* autoPoweroffAct = nullptr;
     /**
      * @brief colorAction 当前选择的QAction
      */
@@ -120,10 +143,6 @@ private:
      */
     int powerOffSecsLeft = -1;
     /**
-     * @brief 软件版本
-     */
-    QString version = "1.1.2.1";
-    /**
      * @brief timerId -1，无自动访问timer，网络正常；其他，有自动访问timer，网络不正常。
      */
     int timerId = -1;
@@ -131,6 +150,10 @@ private:
      * @brief 网络有问题时，自动重新访问的时间，2秒
      */
     const static int REREQUEST_TIME = 2000;
+    /**
+     * @brief 定时关机剩余时间小于多少秒，弹窗提示
+     */
+    const static int LESSTHAN_POP = 120;
     // 周几
     const QString WEEK_STR[8] {"", "周一", "周二", "周三", "周四", "周五", "周六", "周日"};
     // 地址 -
@@ -144,6 +167,7 @@ private:
     const QString CHK_UPD_URL = "https://gitee.com/GiteeLou/pub/raw/master/BiliBang/pub.json";
     const QString BANGUMI_URL_GLOLBAL = "https://bangumi.bilibili.com/web_api/timeline_global";
     const QString BANGUMI_URL_CN = "https://bangumi.bilibili.com/web_api/timeline_cn";
+    const QString DIST_LINK_URL = "https://gitee.com/GiteeLou/pub/blob/master/BiliBang/release_dist.md";
     // 设置颜色相关
     const static int PRESET_COLOR_COUNT = 10;
     const QString PRESET_COLOR_NAME[PRESET_COLOR_COUNT] {"预设", "浅粉", "柠檬", "米黄",
@@ -154,6 +178,15 @@ private:
                                 QColor(244,164,96), QColor(135,206,250),
                                 QColor(153,107,31), QColor(102,64,255),
                                 QColor(255,255,255,0), QColor(0,0,0,0)};
+    const QString ABOUT_US_TEXT = "关于我们";
+    const QString CHECK_UPDATE_TEXT = "检查更新";
+    const QString SET_COLOR_TEXT = "设置颜色";
+    const QString OTHER_MENU_TEXT = "其他功能";
+    const QString RESET_POSITION_TEXT = "复位挂件";
+    const QString COMBINE_LINE_TEXT = "合并线路";
+    const QString AUTO_START_TEXT = "开机启动";
+    const QString AUTO_POWEROFF_TEXT = "定时关机";
+    const QString QUIT_TEXT = "退出软件";
     // 无动画信息时显示内容
     const static int PRESET_ST_LEN = 10;
     const QString PRESET_ST[PRESET_ST_LEN] {"一切都是时辰的错", "你为什么这么熟练啊",
@@ -196,6 +229,13 @@ private:
      * @brief 处理检查更新
      */
     void handleUpdate(const QByteArray& response);
+    /**
+     * @brief 处理更新版本提示
+     */
+    void handleMsg(const QByteArray &response);
+
+    void chkMsg();
+
     void quit();
     void goLeft();
     void goRight();

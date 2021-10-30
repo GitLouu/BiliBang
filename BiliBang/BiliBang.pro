@@ -1,5 +1,5 @@
 QT       += core gui
-QT       += network ## 缃戠粶妯″潡
+QT       += network ## 网络模块
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
@@ -10,9 +10,10 @@ LIBS += -lVersion
 
 RC_ICONS = BiliBang.ico
 
-VERSION = 1.1.2.1
+VERSION = 1.1.2.2
 QMAKE_TARGET_PRODUCT = "BiliBang"
-QMAKE_TARGET_DESCRIPTION = "BiliBang"
+QMAKE_TARGET_DESCRIPTION = "BiliBili新番时间线"
+QMAKE_TARGET_COPYRIGHT = "Copyright GiteeLou. All rights reserved."
 RC_LANG = 0x0004
 
 # You can make your code fail to compile if it uses deprecated APIs.

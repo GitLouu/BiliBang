@@ -7,6 +7,7 @@
 #include <QEvent>
 #include <QGuiApplication>
 #include <QScreen>
+#include <QMouseEvent>
 
 LabelPanel::LabelPanel(QWidget *parent) : QWidget(parent), floatWin(nullptr)
 {
@@ -63,8 +64,6 @@ void LabelPanel::leaveEvent(QEvent *event)
 
 void LabelPanel::mouseReleaseEvent(QMouseEvent *event)
 {
-    if (!mouseMoved)
-        QDesktopServices::openUrl(QUrl(url));
     mouseMoved = false;
     QWidget::mousePressEvent(event);
 }
@@ -73,6 +72,12 @@ void LabelPanel::mouseMoveEvent(QMouseEvent *event)
 {
     mouseMoved = true;
     QWidget::mouseMoveEvent(event);
+}
+
+void LabelPanel::mouseDoubleClickEvent(QMouseEvent *event)
+{
+    if (!mouseMoved && event->button() == Qt::LeftButton)
+        QDesktopServices::openUrl(QUrl(url));
 }
 
 void LabelPanel::setTitle(const QString &title)

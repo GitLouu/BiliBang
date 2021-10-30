@@ -36,6 +36,7 @@ protected:
     virtual void leaveEvent(QEvent *event);
     virtual void mouseReleaseEvent(QMouseEvent *event);
     virtual void mouseMoveEvent(QMouseEvent *event);
+    virtual void mouseDoubleClickEvent(QMouseEvent *event);
 
 private:
     /**
