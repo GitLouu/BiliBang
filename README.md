@@ -12,3 +12,6 @@ Bilibili 动画开播时间线
 1.  [BiliBang_Windows](https://www.bilibili.com/video/BV1pV411n7yR)
 2.  [BiliBang_Android](https://www.bilibili.com/video/BV1Qy4y1g71Z)
 
+#### release
+* [Windows](https://gitee.com/GiteeLou/pub/blob/master/BiliBang/release_dist.md)
+
