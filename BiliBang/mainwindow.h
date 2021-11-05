@@ -178,7 +178,7 @@ private:
                                 QColor(244,164,96), QColor(135,206,250),
                                 QColor(153,107,31), QColor(102,64,255),
                                 QColor(255,255,255,0), QColor(0,0,0,0)};
-    const QString ABOUT_US_TEXT = "关于我们";
+    const QString ABOUT_US_TEXT = "关于";
     const QString CHECK_UPDATE_TEXT = "检查更新";
     const QString SET_COLOR_TEXT = "设置颜色";
     const QString OTHER_MENU_TEXT = "其他功能";
@@ -186,7 +186,7 @@ private:
     const QString COMBINE_LINE_TEXT = "合并线路";
     const QString AUTO_START_TEXT = "开机启动";
     const QString AUTO_POWEROFF_TEXT = "定时关机";
-    const QString QUIT_TEXT = "退出软件";
+    const QString QUIT_TEXT = "退出";
     // 无动画信息时显示内容
     const static int PRESET_ST_LEN = 10;
     const QString PRESET_ST[PRESET_ST_LEN] {"一切都是时辰的错", "你为什么这么熟练啊",

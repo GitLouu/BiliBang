@@ -135,7 +135,9 @@ void MainWindow::initTrayMenu()
         glay->addWidget(tipLabel, row++, 0);
 
         QLabel* donateLabel = new QLabel(dia);
-        donateLabel->setPixmap(QPixmap(QCoreApplication::applicationDirPath() + TEMP_PATH + DONATE).scaledToWidth(200));
+        QPixmap pix(QCoreApplication::applicationDirPath() + TEMP_PATH + DONATE);
+        pix.setDevicePixelRatio(devicePixelRatio());
+        donateLabel->setPixmap(pix.scaledToWidth(200));
         glay->addWidget(donateLabel, row++, 0);
 
         dia->open();
@@ -266,6 +268,10 @@ void MainWindow::initTrayMenu()
             {
                 tipLabel->setText("<font color='red'>即将自动关机...</font>");
             }
+            else
+            {
+                tipLabel->setText("定时关机运行中...");
+            }
         }
 
         poweroffDia->open();
@@ -346,7 +352,7 @@ void MainWindow::handlePowerOff() {
         hourEdit->setText(QString::number(powerOffSecsLeft / 3600));
         minEdit->setText(QString::number((powerOffSecsLeft % 3600) / 60));
     }
-    if (!lessThanTriggered && !poweroffDia && powerOffSecsLeft < LESSTHAN_POP)
+    if (!lessThanTriggered && powerOffSecsLeft < LESSTHAN_POP)
     {
         autoPoweroffAct->trigger();
         lessThanTriggered = true;

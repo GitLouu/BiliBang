@@ -1,6 +1,5 @@
 #include "httprequest.h"
 
-#include <QTextCodec>
 #include <QFile>
 #include <QEventLoop>
 #include <QThread>

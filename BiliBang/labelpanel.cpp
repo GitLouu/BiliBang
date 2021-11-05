@@ -59,13 +59,13 @@ void LabelPanel::leaveEvent(QEvent *event)
     {
         floatWin->hide();
     }
-    QWidget::enterEvent(event);
+    QWidget::leaveEvent(event);
 }
 
 void LabelPanel::mouseReleaseEvent(QMouseEvent *event)
 {
     mouseMoved = false;
-    QWidget::mousePressEvent(event);
+    QWidget::mouseReleaseEvent(event);
 }
 
 void LabelPanel::mouseMoveEvent(QMouseEvent *event)
@@ -78,6 +78,7 @@ void LabelPanel::mouseDoubleClickEvent(QMouseEvent *event)
 {
     if (!mouseMoved && event->button() == Qt::LeftButton)
         QDesktopServices::openUrl(QUrl(url));
+    QWidget::mouseDoubleClickEvent(event);
 }
 
 void LabelPanel::setTitle(const QString &title)
