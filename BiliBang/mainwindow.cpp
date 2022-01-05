@@ -300,6 +300,7 @@ void MainWindow::initTrayMenu()
                 cancelBut->setText("关闭窗口");
                 tipLabel->setText("请设置时间");
                 powerOffSecsLeft = -1;
+                SetThreadExecutionState(ES_CONTINUOUS); // 恢复系统休眠
                 delete powerOffTimer;
                 powerOffTimer = nullptr;
                 return;
@@ -315,6 +316,7 @@ void MainWindow::initTrayMenu()
                     connect(powerOffTimer, &QTimer::timeout, this, &MainWindow::handlePowerOff);
                     powerOffTimer->start(1000); // 每秒执行一次
                 }
+                SetThreadExecutionState(ES_CONTINUOUS | ES_SYSTEM_REQUIRED); // 防止系统休眠（睡眠）
                 lessThanTriggered = false;
                 poweroffDia->close();
             }
@@ -326,6 +328,7 @@ void MainWindow::initTrayMenu()
                 delete powerOffTimer;
                 powerOffTimer = nullptr;
             }
+            SetThreadExecutionState(ES_CONTINUOUS); // 恢复系统休眠
             poweroffDia->close();
         });
 
@@ -471,14 +474,14 @@ void MainWindow::initConfigs()
         if (currLine < 0)
             currLine = 0;
 
-        colorIndex = jDoc["colorIndex"].toInt(0);
-        QAction* color = colorActions.at(colorIndex);
-        color->trigger();
-        colorAct = color;
-
         bool cck = jDoc["combineChecked"].toBool(false);
         combineAct->setChecked(cck);
         switchLineButton->setVisible(!cck);
+
+        colorIndex = jDoc["colorIndex"].toInt(0);
+        QAction* color = colorActions.at(colorIndex);
+        color->trigger(); // 要放在combineAct后面，因为saveConf里面保存了combineAct.isChecked状态
+        colorAct = color;
     }
 }
 

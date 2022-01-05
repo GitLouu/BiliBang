@@ -34,13 +34,13 @@ QString compress(QString filePath, QString releasePath)
 
 void releaseData()
 {
-    QString basePath("D:/QtProjects/release-BiliBang-template/");
+    QString basePath = "D:/QtProjects/release-BiliBang/";
     QString releasePath("D:/QtProjects/release/");
     QDir dir(releasePath);
     if (!dir.exists())
         dir.mkpath(dir.absolutePath());
 
-    QString version("1.1.2.3");
+    QString version("1.1.2.2");
 
     QStringList list;
     list.append("BiliBang.exe"); // 更新的文件

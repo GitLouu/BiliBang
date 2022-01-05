@@ -10,7 +10,7 @@ LIBS += -lVersion
 
 RC_ICONS = BiliBang.ico
 
-VERSION = 1.1.2.2
+VERSION = 1.1.2.3
 QMAKE_TARGET_PRODUCT = "BiliBang"
 QMAKE_TARGET_DESCRIPTION = "BiliBili新番时间线"
 QMAKE_TARGET_COPYRIGHT = "Copyright GiteeLou. All rights reserved."
