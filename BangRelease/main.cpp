@@ -40,7 +40,7 @@ void releaseData()
     if (!dir.exists())
         dir.mkpath(dir.absolutePath());
 
-    QString version("1.1.2.2");
+    QString version("1.1.2.3");
 
     QStringList list;
     list.append("BiliBang.exe"); // 更新的文件

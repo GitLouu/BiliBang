@@ -70,6 +70,10 @@ private:
      */
     bool chkUpdActTriggered;
     /**
+     * @brief 是否合并线路
+     */
+    bool combineChecked = false;
+    /**
      * @brief 检查更新按钮
      */
     QAction* ckUpdAct = nullptr;

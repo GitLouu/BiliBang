@@ -37,6 +37,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     initHttpRequest();
 
+    initConfigs();
+
     initTrayMenu();
 
     initTopWidget();
@@ -44,8 +46,6 @@ MainWindow::MainWindow(QWidget *parent)
     initPanelWidget();
 
     initFloatWindow();
-
-    initConfigs();
 
     readTimeLine();
 
@@ -178,8 +178,9 @@ void MainWindow::initTrayMenu()
         colorMenu->addAction(color);
         colorActions.append(color);
     }
-    colorAct = colorActions.at(0);
+    colorAct = colorActions.at(colorIndex);
     colorAct->setChecked(true);
+    setPalette(QPalette(PRESET_COLOR[colorIndex]));
 
     QMenu* otherMenu = new QMenu(OTHER_MENU_TEXT, this);
     menu->addMenu(otherMenu);
@@ -190,8 +191,10 @@ void MainWindow::initTrayMenu()
 
     combineAct = new QAction(COMBINE_LINE_TEXT, otherMenu);
     combineAct->setCheckable(true);
+    combineAct->setChecked(combineChecked);
     connect(combineAct, &QAction::triggered, this, [this](){
-        switchLineButton->setVisible(!combineAct->isChecked());
+        combineChecked = !combineChecked;
+        switchLineButton->setVisible(!combineChecked);
         readTimeLine();
         saveConf();
     });
@@ -391,6 +394,7 @@ void MainWindow::initTopWidget()
     switchLineButton->setFlat(true);
     switchLineButton->setFixedWidth(topButtonWidth);
     switchLineButton->setToolTip("切换日番/国创时间线");
+    switchLineButton->setVisible(!combineChecked);
     topLayout->addWidget(switchLineButton, 0, 4);
     connect(switchLineButton, &QPushButton::clicked, this, &MainWindow::switchLine);
 
@@ -474,14 +478,9 @@ void MainWindow::initConfigs()
         if (currLine < 0)
             currLine = 0;
 
-        bool cck = jDoc["combineChecked"].toBool(false);
-        combineAct->setChecked(cck);
-        switchLineButton->setVisible(!cck);
+        combineChecked = jDoc["combineChecked"].toBool(false);
 
         colorIndex = jDoc["colorIndex"].toInt(0);
-        QAction* color = colorActions.at(colorIndex);
-        color->trigger(); // 要放在combineAct后面，因为saveConf里面保存了combineAct.isChecked状态
-        colorAct = color;
     }
 }
 
@@ -707,7 +706,13 @@ void MainWindow::handleResponses(QNetworkReply::NetworkError err, const QList<QB
 
     for (int i = 0; i < bangumis.size(); i++) {
         Bangumi* bangumi = bangumis.at(i);
-        std::sort(bangumi->bangs.begin(), bangumi->bangs.end(), compareBan);
+        for (int i = 0; i < bangumi->bangs.size(); i++) {
+            for (int j = i; j < bangumi->bangs.size() - 1; j++) {
+                if (!compareBan(bangumi->bangs.at(j), bangumi->bangs.at(j + 1))) {
+                    bangumi->bangs.swapItemsAt(j, j+ 1);
+                }
+            }
+        }
     }
 
     drawPanels(currIndex);
@@ -858,7 +863,7 @@ void MainWindow::readTimeLine()
     initPanel->show();
     initPanel->setTitle("正在读取...");
     initPanel->setPubIndex("请稍候");
-    if (!combineAct->isChecked())
+    if (!combineChecked)
     {
         hr->Get(urlLines.at(currLine));
     }
