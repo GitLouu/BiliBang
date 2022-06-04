@@ -18,7 +18,7 @@ import java.util.List;
 
 public class BangumiListAdapter extends BaseAdapter {
 
-    private Result result;
+    private final Result result;
 
     RequestOptions requestOptions = new RequestOptions()
             .placeholder(R.drawable.ic_baseline_cloud_circle_24)
@@ -63,16 +63,14 @@ public class BangumiListAdapter extends BaseAdapter {
             viewHolder.episode = convertView.findViewById(R.id.tv_episode);
             viewHolder.cover = convertView.findViewById(R.id.iv_cover);
             convertView.setTag(viewHolder);
-            convertView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Bangumi bangumi = result.getSeasons().get(position);
-                    String url = bangumi.getUrl();
-                    if (url != null && !url.trim().equals("")) {
-                        Uri uri = Uri.parse(url);
-                        Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                        parent.getContext().startActivity(intent);
-                    }
+            convertView.setOnClickListener(v -> {
+                Bangumi bangumi = result.getSeasons().get(position);
+                String url = bangumi.getUrl();
+                if (!"".trim().equals(url)) {
+                    Intent intent = new Intent();
+                    intent.setData(Uri.parse(url));
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    parent.getContext().startActivity(intent);
                 }
             });
         }
@@ -97,7 +95,7 @@ public class BangumiListAdapter extends BaseAdapter {
         return convertView;
     }
 
-    class ViewHolder {
+    static class ViewHolder {
         TextView time, title, episode;
         ImageView cover;
     }

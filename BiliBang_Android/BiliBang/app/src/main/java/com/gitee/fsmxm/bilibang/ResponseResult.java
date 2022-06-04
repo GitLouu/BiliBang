@@ -2,7 +2,10 @@ package com.gitee.fsmxm.bilibang;
 
 import java.util.List;
 
-public class ResResult {
+/**
+ * 接口相应结果
+ */
+public class ResponseResult {
     private Integer code;
     private String message;
     private List<Result> result;

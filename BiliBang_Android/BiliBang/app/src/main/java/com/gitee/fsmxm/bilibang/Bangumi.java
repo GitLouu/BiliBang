@@ -19,6 +19,13 @@ public class Bangumi {
     private String title;
     private String url;
 
+    public static final Bangumi Empty = new Bangumi();
+    static {
+        Empty.setPub_time("     ");
+        Empty.setTitle("空空如也");
+        Empty.setPub_index("今天没有动画哦~");
+    }
+
     public String getCover() {
         return cover;
     }

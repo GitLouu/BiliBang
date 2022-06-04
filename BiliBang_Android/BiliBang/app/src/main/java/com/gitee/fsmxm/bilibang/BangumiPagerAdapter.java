@@ -14,11 +14,11 @@ import java.util.List;
 
 public class BangumiPagerAdapter extends RecyclerView.Adapter<BangumiPagerAdapter.ViewHolder> {
 
-    private ResResult resResult;
-    private Context context;
+    private final ResponseResult responseResult;
+    private final Context context;
 
-    public BangumiPagerAdapter(ResResult resResult, Context context) {
-        this.resResult = resResult;
+    public BangumiPagerAdapter(ResponseResult responseResult, Context context) {
+        this.responseResult = responseResult;
         this.context = context;
     }
 
@@ -31,21 +31,21 @@ public class BangumiPagerAdapter extends RecyclerView.Adapter<BangumiPagerAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        holder.listView.setAdapter(new BangumiListAdapter(resResult.getResult().get(position)));
+        holder.listView.setAdapter(new BangumiListAdapter(responseResult.getResult().get(position)));
     }
 
     @Override
     public int getItemCount() {
-        if (resResult == null) {
+        if (responseResult == null) {
             return 0;
         }
-        List<Result> result = resResult.getResult();
+        List<Result> result = responseResult.getResult();
         return result == null ? 0 : result.size();
     }
 
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         private LinearLayout container;
-        private ListView listView;
+        private final ListView listView;
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             container = itemView.findViewById(R.id.vp_container);

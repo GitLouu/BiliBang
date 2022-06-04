@@ -21,8 +21,8 @@
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
         app:navigationIcon="@drawable/ic_baseline_arrow_back_24"
-        android:background="?attr/colorPrimary"
         android:minHeight="?attr/actionBarSize"
+        android:background="@color/bilibili_pink"
         android:theme="?attr/actionBarTheme"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -33,24 +33,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="@string/titleholder"
+        android:fontFamily="sans-serif-black"
         app:layout_constraintBottom_toBottomOf="@+id/toolbar"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="@+id/toolbar"
         app:layout_constraintTop_toTopOf="parent"
         android:textSize="20sp"/>
-
-    <ImageButton
-        android:id="@+id/ib_change"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginBottom="8dp"
-        android:background="?attr/colorPrimary"
-        android:contentDescription="@string/switchline"
-        app:layout_constraintBottom_toBottomOf="@+id/toolbar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/toolbar"
-        app:srcCompat="@android:drawable/stat_notify_sync"
-        android:onClick="changeTimeline"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
