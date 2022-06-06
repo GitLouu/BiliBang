@@ -1,13 +1,19 @@
 package com.gitee.fsmxm.bilibang;
 
 import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.ListView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.recyclerview.widget.RecyclerView;
 
 import java.util.List;
@@ -29,9 +35,29 @@ public class BangumiPagerAdapter extends RecyclerView.Adapter<BangumiPagerAdapte
                 .from(context).inflate(R.layout.viewpager, parent, false));
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.S)
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         holder.listView.setAdapter(new BangumiListAdapter(responseResult.getResult().get(position)));
+        holder.listView.setOnItemClickListener((parent, view, position1, id) -> {
+            Object itemAtPosition = parent.getItemAtPosition(position1);
+            if (!(itemAtPosition instanceof Bangumi)) {
+                return;
+            }
+            Bangumi bangumi = (Bangumi) itemAtPosition;
+            PackageManager packageManager = view.getContext().getPackageManager();
+            Intent intent = new Intent();
+            try {
+                PackageInfo packageInfo = packageManager.getPackageInfo("tv.danmaku.bili", 0);
+                intent.setPackage(packageInfo.packageName);
+            } catch (PackageManager.NameNotFoundException e) {
+                Log.i("BangumiPagerAdapter", "找不到package " + e.getLocalizedMessage());
+            }
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            intent.setAction(Intent.ACTION_VIEW);
+            intent.setData(Uri.parse(bangumi.getUrl()));
+            view.getContext().startActivity(intent);
+        });
     }
 
     @Override
@@ -44,11 +70,10 @@ public class BangumiPagerAdapter extends RecyclerView.Adapter<BangumiPagerAdapte
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        private LinearLayout container;
         private final ListView listView;
+
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            container = itemView.findViewById(R.id.vp_container);
             listView = itemView.findViewById(R.id.lv);
         }
 

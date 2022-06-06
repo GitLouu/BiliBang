@@ -1,7 +1,5 @@
 package com.gitee.fsmxm.bilibang;
 
-import android.content.Intent;
-import android.net.Uri;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -63,16 +61,6 @@ public class BangumiListAdapter extends BaseAdapter {
             viewHolder.episode = convertView.findViewById(R.id.tv_episode);
             viewHolder.cover = convertView.findViewById(R.id.iv_cover);
             convertView.setTag(viewHolder);
-            convertView.setOnClickListener(v -> {
-                Bangumi bangumi = result.getSeasons().get(position);
-                String url = bangumi.getUrl();
-                if (!"".trim().equals(url)) {
-                    Intent intent = new Intent();
-                    intent.setData(Uri.parse(url));
-                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    parent.getContext().startActivity(intent);
-                }
-            });
         }
 
         ViewHolder viewHolder = (ViewHolder) convertView.getTag();
