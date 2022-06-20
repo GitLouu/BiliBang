@@ -3,7 +3,7 @@
 #### 介绍
 Bilibili 动画开播时间线
 
-* BiliBang 使用Qt5.15.2开发，Windows的桌面挂件
+* BiliBang_Qt 使用Qt5.15.2开发，Windows的桌面挂件
 * BiliBang_Android Android app
 
 
