@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">BiliBang</string>
+    <string name="switch_line">switch line</string>
+    <string name="anim_name">animation name</string>
+    <string name="episode">episode</string>
+    <string name="quit" translatable="false">quit</string>
+    <string name="title_holder" translatable="false">title holder</string>
+</resources>
